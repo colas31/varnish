@@ -1,14 +1,18 @@
 sub https_vcl_recv {
-	if (std.port( server.ip ) == 8443 || req.http.X-Forwarded-Proto == "https") {
+	if (std.port( server.ip ) == 443
+		|| std.port( server.ip ) == 9443
+		|| req.http.X-Forwarded-Proto == "https") {
 		set req.http.X-Forwarded-Proto = "https";
 		set req.http.https = "on";
 	}
 
-    # Redirect to https
-	if (client.ip != "127.0.0.1" && req.http.X-Forwarded-Proto !~ "(?i)https" &&
-			req.http.host ~ "tutoandco\.colas-delmas\.fr$") {
-		set req.http.x-redir = "https://" + req.http.host + req.url;
-		return(synth(750, ""));
+    # https://info.varnish-software.com/blog/rewriting-urls-with-varnish-redirection
+	if (client.ip != "127.0.0.1"
+	        && req.http.X-Forwarded-Proto !~ "(?i)https" &&
+			 req.http.host ~ "tutoandco\.colas-delmas\.fr$") {
+
+		set req.http.location = "https://" + req.http.host + req.url;
+		return(synth(301));
 	}
 
 }
@@ -23,9 +27,8 @@ sub https_vcl_hash {
 }
 
 sub https_vcl_synth {
-	if (resp.status == 750) {
-	 	set resp.http.Location = req.http.x-redir;
-	 	set resp.status = 301;
+	if (resp.status == 301 || resp.status == 302) {
+	 	set resp.http.Location = req.http.location;
 	 	return (deliver);
 	}
 }
