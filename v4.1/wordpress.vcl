@@ -4,6 +4,15 @@ sub wordpress_vcl_recv {
     # don't need too different cache for Wordpress, theme are fully responsive
     set req.http.X-User-Agent = "desktop";
 
+	# WordPress sets many cookies that are safe to ignore. To remove them, add the following lines
+	#https://info.varnish-software.com/blog/varnish-wiki-highlights-wordpress
+	set req.http.cookie = regsuball(req.http.cookie, "wp-settings-\d+=[^;]+(; )?", "");
+    set req.http.cookie = regsuball(req.http.cookie, "wp-settings-time-\d+=[^;]+(; )?", "");
+    set req.http.cookie = regsuball(req.http.cookie, "wordpress_test_cookie=[^;]+(; )?", "
+	if (req.http.cookie == "") {
+		unset req.http.cookie;
+	}
+
 	# Check the cookies for wordpress-specific items
 	if (req.http.Cookie ~ "wordpress_"
 	    || req.http.Cookie ~ "comment_") {
@@ -27,12 +36,7 @@ sub wordpress_vcl_recv {
         return (pass);
 	}
 
-	# WordPress sets many cookies that are safe to ignore. To remove them, add the following lines
-	set req.http.cookie = regsuball(req.http.cookie, "wp-settings-\d+=[^;]+(; )?", "");
-	set req.http.cookie = regsuball(req.http.cookie, "wp-settings-time-\d+=[^;]+(; )?", "");
-	if (req.http.cookie == "") {
-		unset req.http.cookie;
-	}
+
 	# --- End of Wordpress specific configuration
 }
 
@@ -41,4 +45,7 @@ sub wordpress_vcl_backend_response {
 	if (bereq.url !~ "wp-admin|wp-login|product|cart|checkout|my-account|/?remove_item=") {
 		unset beresp.http.set-cookie;
 	}
+
+    # extending caching time
+	set beresp.ttl = 1w;
 }
