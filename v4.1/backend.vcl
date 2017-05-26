@@ -1,7 +1,7 @@
 probe healthcheck {
         .request =
                 "HEAD /check.php HTTP/1.1"
-                "Host: tutoandco.colas-delmas.fr"
+                "Host: monsite.fr"
                 "Connection: close";
         .timeout = 5s;
         .interval = 4s;
