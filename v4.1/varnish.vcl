@@ -35,14 +35,6 @@ sub vcl_recv {
 
  	set req.http.Via = "1.1 varnish-v4";
 	set req.http.grace = "none";
-	if (req.restarts == 0) {
-		if (req.http.X-Forwarded-For) {
-			# set or append the client.ip to X-Forwarded-For header
-			set req.http.X-Forwarded-For = req.http.X-Forwarded-For + ", " + client.ip;
-		} else {
-			set req.http.X-Forwarded-For = client.ip;
-		}
-	}
 
 	call https_vcl_recv;
 	call ban_purge_vcl_recv;
@@ -201,6 +193,7 @@ sub vcl_backend_fetch {
 #
 sub vcl_backend_response {
 	if ( beresp.http.Content-Length == "0"
+	        && bereq.method == "GET"
 			&& bereq.retries < 3
 			&& beresp.status != 301
 			&& beresp.status != 302
